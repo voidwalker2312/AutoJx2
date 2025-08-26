@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <AssemblyTitle>AutoJx2 - Game Automation Tool</AssemblyTitle>
+    <AssemblyDescription>Tool tự động hóa cho game JX2</AssemblyDescription>
+    <AssemblyCompany>Your Company</AssemblyCompany>
+    <AssemblyProduct>AutoJx2</AssemblyProduct>
+    <AssemblyCopyright>Copyright © 2024</AssemblyCopyright>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FlaUI.Core" Version="4.0.0" />
+    <PackageReference Include="FlaUI.UIA3" Version="4.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+    <PackageReference Include="System.Security.Principal.Windows" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="5.0.0" />
+  </ItemGroup>
+
+
+
+</Project>
