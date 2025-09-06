@@ -11,7 +11,7 @@ namespace AutoJx2
 {
     public partial class App : Application
     {
-        private ServiceProvider _serviceProvider;
+        private ServiceProvider _serviceProvider = null!;
         
         public ServiceProvider ServiceProvider => _serviceProvider;
 
@@ -32,9 +32,18 @@ namespace AutoJx2
             ConfigureServices(services);
             _serviceProvider = services.BuildServiceProvider();
 
-            // Khởi tạo MainWindow với DI
-            var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+            // Khởi tạo MainWindow thủ công với DI
+            var logger = _serviceProvider.GetRequiredService<ILogger<MainWindow>>();
+            var credentialManager = _serviceProvider.GetRequiredService<ICredentialManager>();
+            var gameAutomation = _serviceProvider.GetRequiredService<IGameAutomation>();
+            var configurationManager = _serviceProvider.GetRequiredService<IConfigurationManager>();
+            var gameProcessManager = _serviceProvider.GetRequiredService<IGameProcessManager>();
+            
+            var mainWindow = new MainWindow(logger, credentialManager, gameAutomation, configurationManager, gameProcessManager);
             mainWindow.Show();
+            
+            // Đặt MainWindow làm MainWindow của ứng dụng
+            MainWindow = mainWindow;
         }
 
         private void ConfigureServices(ServiceCollection services)
@@ -47,7 +56,9 @@ namespace AutoJx2
 
             services.AddSingleton<ICredentialManager, CredentialManager>();
             services.AddSingleton<IGameAutomation, GameAutomation>();
-            services.AddSingleton<MainWindow>();
+            services.AddSingleton<IConfigurationManager, ConfigurationManager>();
+            services.AddSingleton<IGameProcessManager, GameProcessManager>();
+            // MainWindow sẽ được tạo thủ công
         }
 
         protected override void OnExit(ExitEventArgs e)

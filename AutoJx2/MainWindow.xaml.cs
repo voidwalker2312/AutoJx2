@@ -11,6 +11,8 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using AutoJx2.Interfaces;
 using AutoJx2.Services;
+using AutoJx2.Models;
+using Microsoft.Win32;
 
 namespace AutoJx2
 {
@@ -19,10 +21,13 @@ namespace AutoJx2
         private ILogger<MainWindow>? _logger;
         private ICredentialManager? _credentialManager;
         private IGameAutomation? _gameAutomation;
+        private IConfigurationManager? _configurationManager;
+        private IGameProcessManager? _gameProcessManager;
         private readonly DispatcherTimer _timer;
         private Process? _attachedProcess;
         private bool _isAutomationRunning = false;
         private DateTime _startTime;
+        private List<Models.GameAccount> _accounts = new List<Models.GameAccount>();
 
         public MainWindow()
         {
@@ -44,19 +49,23 @@ namespace AutoJx2
                 _logger = app.ServiceProvider.GetRequiredService<ILogger<MainWindow>>();
                 _credentialManager = app.ServiceProvider.GetRequiredService<ICredentialManager>();
                 _gameAutomation = app.ServiceProvider.GetRequiredService<IGameAutomation>();
+                _configurationManager = app.ServiceProvider.GetRequiredService<IConfigurationManager>();
+                _gameProcessManager = app.ServiceProvider.GetRequiredService<IGameProcessManager>();
             }
             
             // Khởi tạo giao diện
             InitializeUI();
         }
 
-        public MainWindow(ILogger<MainWindow> logger, ICredentialManager credentialManager, IGameAutomation gameAutomation)
+        public MainWindow(ILogger<MainWindow> logger, ICredentialManager credentialManager, IGameAutomation gameAutomation, IConfigurationManager configurationManager, IGameProcessManager gameProcessManager)
         {
             InitializeComponent();
             
             _logger = logger;
             _credentialManager = credentialManager;
             _gameAutomation = gameAutomation;
+            _configurationManager = configurationManager;
+            _gameProcessManager = gameProcessManager;
             
             // Khởi tạo _startTime
             _startTime = DateTime.Now;
@@ -82,6 +91,10 @@ namespace AutoJx2
                 
                 // Load settings
                 LoadSettings();
+                
+                // Load game path and accounts
+                LoadGamePath();
+                LoadAccounts();
                 
                 // Refresh process list
                 RefreshProcesses();
@@ -508,10 +521,345 @@ namespace AutoJx2
             _logger?.LogInformation("Hotkey registration will be implemented");
         }
 
+        #region Auto Login Methods
+
+        private void LoadGamePath()
+        {
+            try
+            {
+                if (_configurationManager != null && GamePathTextBox != null)
+                {
+                    var gamePath = _configurationManager.GetGamePath();
+                    GamePathTextBox.Text = string.IsNullOrEmpty(gamePath) ? "Chưa chọn đường dẫn game" : gamePath;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error loading game path");
+            }
+        }
+
+        private void LoadAccounts()
+        {
+            try
+            {
+                if (_configurationManager != null && AccountsListView != null)
+                {
+                    _accounts = _configurationManager.GetAccounts();
+                    AccountsListView.ItemsSource = _accounts;
+                    UpdateAutoLoginStatus($"Đã tải {_accounts.Count} account");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error loading accounts");
+                UpdateAutoLoginStatus("Lỗi khi tải danh sách account");
+            }
+        }
+
+        private void BrowseGamePathButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var openFileDialog = new OpenFileDialog
+                {
+                    Title = "Chọn file so2game.exe",
+                    Filter = "Executable files (*.exe)|*.exe|All files (*.*)|*.*",
+                    FileName = "so2game.exe"
+                };
+
+                if (openFileDialog.ShowDialog() == true)
+                {
+                    if (GamePathTextBox != null)
+                    {
+                        GamePathTextBox.Text = openFileDialog.FileName;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error browsing game path");
+                MessageBox.Show($"Lỗi khi chọn file game: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void SaveGamePathButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_configurationManager == null || GamePathTextBox == null)
+                    return;
+
+                var gamePath = GamePathTextBox.Text.Trim();
+                if (string.IsNullOrEmpty(gamePath) || gamePath == "Chưa chọn đường dẫn game")
+                {
+                    MessageBox.Show("Vui lòng chọn đường dẫn game trước khi lưu.", "Cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!File.Exists(gamePath))
+                {
+                    MessageBox.Show("File game không tồn tại. Vui lòng kiểm tra lại đường dẫn.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                _configurationManager.SaveGamePath(gamePath);
+                UpdateAutoLoginStatus("Đường dẫn game đã được lưu");
+                MessageBox.Show("Đường dẫn game đã được lưu thành công!", "Thành công", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error saving game path");
+                MessageBox.Show($"Lỗi khi lưu đường dẫn game: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void AddAccountButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_configurationManager == null || _logger == null)
+                    return;
+
+                var loggerFactory = (Application.Current as App)?.ServiceProvider?.GetRequiredService<ILoggerFactory>();
+                var addAccountLogger = loggerFactory?.CreateLogger<AddAccountWindow>();
+                var addAccountWindow = new AddAccountWindow(_configurationManager, addAccountLogger);
+                addAccountWindow.Owner = this;
+                addAccountWindow.AccountSaved += (s, account) =>
+                {
+                    LoadAccounts();
+                    UpdateAutoLoginStatus($"Account '{account.Username}' đã được thêm");
+                };
+
+                addAccountWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error opening add account window");
+                MessageBox.Show($"Lỗi khi mở cửa sổ thêm account: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void RefreshAccountsButton_Click(object sender, RoutedEventArgs e)
+        {
+            LoadAccounts();
+        }
+
+        private void RemoveSelectedAccountsButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_configurationManager == null || AccountsListView == null)
+                    return;
+
+                var selectedItems = new List<Models.GameAccount>();
+                foreach (var item in AccountsListView.SelectedItems)
+                {
+                    if (item is Models.GameAccount account)
+                    {
+                        selectedItems.Add(account);
+                    }
+                }
+                
+                if (selectedItems.Count == 0)
+                {
+                    MessageBox.Show("Vui lòng chọn account cần xóa.", "Cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                var result = MessageBox.Show($"Bạn có chắc chắn muốn xóa {selectedItems.Count} account đã chọn?", 
+                    "Xác nhận xóa", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                
+                if (result == MessageBoxResult.Yes)
+                {
+                    foreach (var account in selectedItems)
+                    {
+                        _configurationManager.RemoveAccount(account.Id);
+                    }
+                    LoadAccounts();
+                    UpdateAutoLoginStatus($"Đã xóa {selectedItems.Count} account");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error removing selected accounts");
+                MessageBox.Show($"Lỗi khi xóa account: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void AccountsListView_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            try
+            {
+                if (AccountsListView.SelectedItem is Models.GameAccount account)
+                {
+                    StartGameForAccount(account);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error starting game on double click");
+            }
+        }
+
+        private void StartGameMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (AccountsListView.SelectedItem is Models.GameAccount account)
+                {
+                    StartGameForAccount(account);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error starting game from context menu");
+            }
+        }
+
+        private void StopGameMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (AccountsListView.SelectedItem is GameAccount account && account.ProcessId.HasValue)
+                {
+                    _gameProcessManager?.StopGame(account.ProcessId.Value);
+                    UpdateAutoLoginStatus($"Đã dừng game cho account '{account.Username}'");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error stopping game from context menu");
+            }
+        }
+
+        private void EditAccountMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (AccountsListView.SelectedItem is Models.GameAccount account && _configurationManager != null && _logger != null)
+                {
+                    var loggerFactory = (Application.Current as App)?.ServiceProvider?.GetRequiredService<ILoggerFactory>();
+                    var editAccountLogger = loggerFactory?.CreateLogger<AddAccountWindow>();
+                    var editAccountWindow = new AddAccountWindow(_configurationManager, editAccountLogger, account);
+                    editAccountWindow.Owner = this;
+                    editAccountWindow.AccountSaved += (s, updatedAccount) =>
+                    {
+                        LoadAccounts();
+                        UpdateAutoLoginStatus($"Account '{updatedAccount.Username}' đã được cập nhật");
+                    };
+
+                    editAccountWindow.ShowDialog();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error opening edit account window");
+                MessageBox.Show($"Lỗi khi mở cửa sổ chỉnh sửa account: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void ToggleVisibilityMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (AccountsListView.SelectedItem is Models.GameAccount account && _configurationManager != null)
+                {
+                    account.IsHidden = !account.IsHidden;
+                    _configurationManager.UpdateAccount(account);
+                    LoadAccounts();
+                    UpdateAutoLoginStatus($"Account '{account.Username}' đã được {(account.IsHidden ? "ẩn" : "hiện")}");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error toggling account visibility");
+            }
+        }
+
+        private void RemoveAccountMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (AccountsListView.SelectedItem is GameAccount account && _configurationManager != null)
+                {
+                    var result = MessageBox.Show($"Bạn có chắc chắn muốn xóa account '{account.Username}'?", 
+                        "Xác nhận xóa", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                    
+                    if (result == MessageBoxResult.Yes)
+                    {
+                        _configurationManager.RemoveAccount(account.Id);
+                        LoadAccounts();
+                        UpdateAutoLoginStatus($"Account '{account.Username}' đã được xóa");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error removing account from context menu");
+                MessageBox.Show($"Lỗi khi xóa account: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void StartGameForAccount(Models.GameAccount account)
+        {
+            try
+            {
+                if (_configurationManager == null || _gameProcessManager == null)
+                    return;
+
+                var gamePath = _configurationManager.GetGamePath();
+                if (string.IsNullOrEmpty(gamePath))
+                {
+                    MessageBox.Show("Vui lòng chọn đường dẫn game trước khi khởi động.", "Cảnh báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                if (!File.Exists(gamePath))
+                {
+                    MessageBox.Show("File game không tồn tại. Vui lòng kiểm tra lại đường dẫn game.", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                var process = _gameProcessManager.StartGame(account, gamePath);
+                if (process != null)
+                {
+                    UpdateAutoLoginStatus($"Đã khởi động game cho account '{account.Username}'");
+                }
+                else
+                {
+                    UpdateAutoLoginStatus($"Không thể khởi động game cho account '{account.Username}'");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error starting game for account: {Username}", account.Username);
+                MessageBox.Show($"Lỗi khi khởi động game: {ex.Message}", "Lỗi", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private void UpdateAutoLoginStatus(string message)
+        {
+            try
+            {
+                if (AutoLoginStatusTextBlock != null)
+                {
+                    AutoLoginStatusTextBlock.Text = message;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogError(ex, "Error updating auto login status");
+            }
+        }
+
+        #endregion
+
         protected override void OnClosed(EventArgs e)
         {
             _timer?.Stop();
             _gameAutomation?.Dispose();
+            _gameProcessManager?.Dispose();
             base.OnClosed(e);
         }
     }

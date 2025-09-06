@@ -259,7 +259,137 @@
                 </Grid>
             </TabItem>
             
-            <!-- Tab 3: Logs -->
+            <!-- Tab 3: Auto Login -->
+            <TabItem Header="🔐 Auto Login">
+                <Grid Margin="10">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Game Path Selection -->
+                    <GroupBox Grid.Row="0" Header="Đường dẫn Game" Margin="0,0,0,10">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="GamePathTextBox" 
+                                     Grid.Column="0" 
+                                     Margin="5"
+                                     IsReadOnly="True"
+                                     Text="Chưa chọn đường dẫn game"/>
+                            <Button x:Name="BrowseGamePathButton" 
+                                    Grid.Column="1" 
+                                    Content="📁 Chọn" 
+                                    Click="BrowseGamePathButton_Click"
+                                    Margin="5,0"/>
+                            <Button x:Name="SaveGamePathButton" 
+                                    Grid.Column="2" 
+                                    Content="💾 Lưu" 
+                                    Click="SaveGamePathButton_Click"
+                                    Margin="5,0"/>
+                        </Grid>
+                    </GroupBox>
+                    
+                    <!-- Account Management -->
+                    <GroupBox Grid.Row="1" Header="Quản lý Account" Margin="0,0,0,10">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            
+                            <!-- Account Actions -->
+                            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+                                <Button x:Name="AddAccountButton" 
+                                        Content="➕ Thêm Account" 
+                                        Click="AddAccountButton_Click"
+                                        Margin="0,0,5,0"/>
+                                <Button x:Name="RefreshAccountsButton" 
+                                        Content="🔄 Làm mới" 
+                                        Click="RefreshAccountsButton_Click"
+                                        Margin="5,0"/>
+                                <Button x:Name="RemoveSelectedAccountsButton" 
+                                        Content="🗑️ Xóa đã chọn" 
+                                        Click="RemoveSelectedAccountsButton_Click"
+                                        Margin="5,0"/>
+                            </StackPanel>
+                            
+                            <!-- Account List -->
+                            <ListView x:Name="AccountsListView" 
+                                      Grid.Row="1" 
+                                      Height="200"
+                                      SelectionMode="Multiple"
+                                      MouseDoubleClick="AccountsListView_MouseDoubleClick">
+                                <ListView.View>
+                                    <GridView>
+                                        <GridViewColumn Header="Chọn" Width="50">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected}" 
+                                                              Tag="{Binding}"/>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Tên đăng nhập" Width="150" DisplayMemberBinding="{Binding Username}"/>
+                                        <GridViewColumn Header="Server" Width="100" DisplayMemberBinding="{Binding Server}"/>
+                                        <GridViewColumn Header="Trạng thái" Width="100">
+                                            <GridViewColumn.CellTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock>
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="🟢 Đang chạy"/>
+                                                                <Setter Property="Foreground" Value="Green"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsRunning}" Value="False">
+                                                                        <Setter Property="Text" Value="🔴 Dừng"/>
+                                                                        <Setter Property="Foreground" Value="Red"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </GridViewColumn.CellTemplate>
+                                        </GridViewColumn>
+                                        <GridViewColumn Header="Ghi chú" Width="Auto" DisplayMemberBinding="{Binding Notes}"/>
+                                    </GridView>
+                                </ListView.View>
+                                <ListView.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="▶️ Khởi động Game" Click="StartGameMenuItem_Click"/>
+                                        <MenuItem Header="⏹️ Dừng Game" Click="StopGameMenuItem_Click"/>
+                                        <Separator/>
+                                        <MenuItem Header="✏️ Chỉnh sửa" Click="EditAccountMenuItem_Click"/>
+                                        <MenuItem Header="👁️ Ẩn/Hiện" Click="ToggleVisibilityMenuItem_Click"/>
+                                        <MenuItem Header="🗑️ Xóa" Click="RemoveAccountMenuItem_Click"/>
+                                    </ContextMenu>
+                                </ListView.ContextMenu>
+                            </ListView>
+                        </Grid>
+                    </GroupBox>
+                    
+                    <!-- Status -->
+                    <GroupBox Grid.Row="2" Header="Trạng thái">
+                        <StackPanel>
+                            <TextBlock x:Name="AutoLoginStatusTextBlock" 
+                                       Text="Sẵn sàng" 
+                                       FontWeight="Bold" 
+                                       Margin="5"/>
+                            <TextBlock x:Name="AutoLoginInfoTextBlock" 
+                                       Text="Chọn đường dẫn game và thêm account để bắt đầu" 
+                                       Foreground="Gray" 
+                                       Margin="5"/>
+                        </StackPanel>
+                    </GroupBox>
+                </Grid>
+            </TabItem>
+            
+            <!-- Tab 4: Logs -->
             <TabItem Header="📋 Logs">
                 <Grid Margin="10">
                     <Grid.RowDefinitions>

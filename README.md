@@ -32,7 +32,7 @@ Tool tự động hóa cho game JX2 được xây dựng bằng C# + WPF (.NET 8
 
 ### 1. Clone repository
 ```bash
-git clone https://github.com/yourusername/AutoJx2.git
+git clone https://github.com/voidwalker2312/AutoJx2.git
 cd AutoJx2
 ```
 
@@ -154,8 +154,8 @@ Tool này được cung cấp "nguyên trạng" và chỉ dành cho mục đích
 
 ## 📞 Liên hệ
 
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
+- GitHub: [@voidwalker2312](https://github.com/voidwalker2312)
+- Email: lqdinh210@gmail.com
 
 ---
 
