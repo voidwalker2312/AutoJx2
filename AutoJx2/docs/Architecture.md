@@ -1,18 +1,20 @@
 # AutoJx2 – Kiến trúc và Luồng Hoạt Động
 
-Tài liệu mô tả cấu trúc thành phần, dữ liệu, và các luồng chính (khởi động, Auto Login, attach + automation) của ứng dụng.
+Tài liệu mô tả cấu trúc thành phần, dữ liệu và các luồng chính (khởi động, Auto Login, attach + automation) của ứng dụng.
 
 ## 1) Tổng Quan Kiến Trúc
 
 ```mermaid
 graph LR
-  U[Người dùng] -->|WPF UI| MW[MainWindow]
+  U[User] -->|WPF UI| MW[MainWindow]
+
   subgraph Services
-    CFG[IConfigurationManager<br/>ConfigurationManager]
-    CRE[ICredentialManager<br/>CredentialManager]
-    GPM[IGameProcessManager<br/>GameProcessManager]
-    AUT[IGameAutomation<br/>GameAutomation (FlaUI)]
+    CFG[IConfigurationManager / ConfigurationManager]
+    CRE[ICredentialManager / CredentialManager]
+    GPM[IGameProcessManager / GameProcessManager]
+    AUT[IGameAutomation / GameAutomation - FlaUI]
   end
+
   MW --> CFG
   MW --> CRE
   MW --> GPM
@@ -22,13 +24,14 @@ graph LR
     FL[UIA3 / FlaUI]
     PROC[so2game.exe]
     WCM[Windows Credential Manager]
-    DPAPI[Windows DPAPI]
+    DP[Windows DPAPI]
     LOGS[Serilog -> logs/*.log]
   end
+
   AUT --> FL
   AUT --> PROC
   CRE --> WCM
-  CRE --> DPAPI
+  CRE --> DP
   MW --> LOGS
 ```
 
@@ -71,15 +74,15 @@ sequenceDiagram
   participant P as Process(so2game.exe)
 
   UI->>CFG: GetGamePath()
-  alt đường dẫn hợp lệ
+  alt path hợp lệ
     UI->>GPM: StartGame(account, gamePath)
-    GPM->>GPM: Kiểm tra tồn tại file, tránh trùng process
+    GPM->>GPM: Kiểm tra tồn tại file / tránh trùng process
     GPM->>P: Process.Start(gamePath)
-    GPM-->>UI: Trả về Process + cập nhật account(ProcessId/IsRunning)
-    P-->>GPM: Exited (sự kiện)
-    GPM-->>UI: GameStopped event (dọn trạng thái)
-  else không hợp lệ
-    UI-->>UI: Thông báo lỗi/nhắc chọn lại đường dẫn
+    GPM-->>UI: Trả về Process + cập nhật account
+    P-->>GPM: Exited (event)
+    GPM-->>UI: GameStopped (update trạng thái)
+  else path không hợp lệ
+    UI-->>UI: Thông báo lỗi / nhắc chọn lại
   end
 ```
 
@@ -92,16 +95,16 @@ sequenceDiagram
 ```mermaid
 flowchart TD
   A[Chọn process trong ComboBox] --> B[AttachProcessButton_Click]
-  B --> C[IGameAutomation.AttachToProcess(process)]
-  C --> D[Application.Attach + GetMainWindow(UIA3)]
+  B --> C[AttachToProcess]
+  C --> D[Attach + GetMainWindow]
   D --> E[StartAutomationButton_Click]
   E --> F[StartAutomation]
-  F --> G{_isRunning}
-  G -->|true| H[Task.Run RunAutomationLoop]
+  F --> G{isRunning?}
+  G -->|yes| H[RunAutomationLoop]
   H --> I[PerformAutomationTasks theo flags]
-  I --> J[Delay theo _delay]
+  I --> J[Delay theo cấu hình]
   J --> H
-  G -->|stop| K[StopAutomation - Cancel token]
+  G -->|stop| K[StopAutomation - cancel]
 ```
 
 Trích dẫn:
@@ -132,7 +135,7 @@ classDiagram
   }
   class GameCredentials {
     string Username
-    string Password  // DPAPI bảo vệ
+    string Password  // DPAPI protected
     string Server
     DateTime CreatedAt
     DateTime LastUpdated
@@ -169,7 +172,7 @@ Nguồn:
 - Log ghi bằng Serilog: `logs/autojx2-*.log` (theo ngày, giữ tối đa 7 file).
 
 ## 7) Gợi Ý Render Diagram
-- GitHub hiện hỗ trợ Mermaid trực tiếp trong Markdown.
+- GitHub hỗ trợ Mermaid trực tiếp trong Markdown.
 - Trong VS Code, cài “Markdown Preview Mermaid Support” để xem sơ đồ ngay trong IDE.
 - Nếu cần ảnh PNG/SVG, có thể dùng `mmdc` (Mermaid CLI) để xuất ảnh từ các khối Mermaid ở trên.
 
