@@ -64,7 +64,12 @@ namespace AutoJx2.Services
 
         public List<Models.GameAccount> GetAccounts()
         {
-            return _configuration.Accounts ?? new List<Models.GameAccount>();
+            // Trả về bản sao để UI khi set ItemsSource nhận reference mới và refresh
+            if (_configuration.Accounts == null)
+            {
+                return new List<Models.GameAccount>();
+            }
+            return new List<Models.GameAccount>(_configuration.Accounts);
         }
 
         public void AddAccount(Models.GameAccount account)

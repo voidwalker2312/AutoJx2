@@ -195,5 +195,10 @@ namespace AutoJx2
             // Đặt focus vào textbox đầu tiên
             UsernameTextBox.Focus();
         }
+
+        private void ServerComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+
+        }
     }
 }
